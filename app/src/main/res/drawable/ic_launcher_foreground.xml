@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Wallet Back Shadow & Outline -->
+    <path
+        android:pathData="M27,39 C27,34.5 30.5,31 35,31 L73,31 C77.5,31 81,34.5 81,39 L81,69 C81,73.5 77.5,77 73,77 L35,77 C30.5,77 27,73.5 27,69 Z"
+        android:fillColor="#1E293B" />
+
+    <!-- Wallet Card/Bill Slot -->
+    <path
+        android:pathData="M32,27 C32,25.5 33.5,24 35,24 L65,24 C66.5,24 68,25.5 68,27 L68,31 L32,31 Z"
+        android:fillColor="#047857" />
+
+    <!-- Wallet Main Body Gradient -->
+    <path
+        android:pathData="M27,37 C27,33.5 30,31 34,31 L74,31 C78,31 81,33.5 81,37 L81,69 C81,73.5 77.5,77 73,77 L35,77 C30.5,77 27,73.5 27,69 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="27"
+                android:startY="31"
+                android:endX="81"
+                android:endY="77"
+                android:type="linear">
+                <item android:color="#10B981" android:offset="0.0" />
+                <item android:color="#059669" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Wallet Flap Pocket -->
+    <path
+        android:pathData="M56,47 C56,43.5 59,41 62.5,41 L81,41 L81,63 L62.5,63 C59,63 56,60.5 56,57 Z"
+        android:fillColor="#065F46" />
+
+    <!-- Gold Clasp / Coin Button -->
+    <path
+        android:pathData="M65,52 A5,5 0 1,0 65,52.01 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="60"
+                android:startY="47"
+                android:endX="70"
+                android:endY="57"
+                android:type="linear">
+                <item android:color="#FCD34D" android:offset="0.0" />
+                <item android:color="#F59E0B" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Center Clasp Core -->
+    <path
+        android:pathData="M65,52 A2,2 0 1,0 65,52.01 Z"
+        android:fillColor="#FFFBEB" />
+
+    <!-- Upward Growth Arrow badge on top left -->
+    <path
+        android:pathData="M35,63 L45,51 L51,57 L63,43"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+
+    <path
+        android:pathData="M57,43 L63,43 L63,49"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

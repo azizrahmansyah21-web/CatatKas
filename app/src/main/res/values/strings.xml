@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CatatKas</string>
+    <string name="nav_transactions">Transaksi</string>
+    <string name="nav_statistics">Statistik</string>
+    <string name="nav_categories">Kategori</string>
+    <string name="nav_settings">Pengaturan</string>
+    <string name="expense">Pengeluaran</string>
+    <string name="income">Pemasukan</string>
+    <string name="balance">Saldo Bersih</string>
+    <string name="add_transaction">Catat Transaksi</string>
+    <string name="edit_transaction">Ubah Transaksi</string>
+    <string name="nominal_hint">Rp 0</string>
+    <string name="catatan_hint">Tulis catatan transaksi (opsional)...</string>
+    <string name="simpan">Simpan Transaksi</string>
+    <string name="batal">Batal</string>
+    <string name="hapus">Hapus</string>
+    <string name="konfirmasi_hapus">Hapus Transaksi?</string>
+    <string name="konfirmasi_hapus_desc">Data transaksi ini akan dihapus secara permanen.</string>
+    <string name="ekspor_laporan">Ekspor Laporan</string>
+    <string name="ekspor_csv">Ekspor Format CSV</string>
+    <string name="ekspor_pdf">Ekspor Format PDF</string>
+    <string name="pengingat_harian">Pengingat Harian</string>
+    <string name="pengingat_notif_title">Waktunya Catat Keuangan! 🌿</string>
+    <string name="pengingat_notif_body">Jangan lupa catat pengeluaran dan pemasukanmu hari ini agar dompet tetap sehat.</string>
+    <string name="biometrik_title">Kunci Keamanan Biometrik</string>
+    <string name="biometrik_prompt_title">Buka Akses CatatKas</string>
+    <string name="biometrik_prompt_subtitle">Verifikasi biometrik atau PIN untuk melindungi data keuanganmu</string>
+</resources>

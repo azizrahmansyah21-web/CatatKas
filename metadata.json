@@ -1,0 +1,6 @@
+{
+  "name": "CatatKas",
+  "description": "Aplikasi pencatat keuangan pribadi dengan sinkronisasi cloud real-time, statistik bulanan interaktif, kustomisasi kategori, ekspor laporan, dan proteksi biometrik.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
