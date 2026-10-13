@@ -4,7 +4,8 @@
     <string name="nav_transactions">Transaksi</string>
     <string name="nav_statistics">Statistik</string>
     <string name="nav_categories">Kategori</string>
-    <string name="nav_settings">Pengaturan</string>
+    <string name="nav_financial_plan">Rencana Kas</string>
+    <string name="nav_profile">Profil</string>
     <string name="expense">Pengeluaran</string>
     <string name="income">Pemasukan</string>
     <string name="balance">Saldo Bersih</string>
@@ -26,4 +27,11 @@
     <string name="biometrik_title">Kunci Keamanan Biometrik</string>
     <string name="biometrik_prompt_title">Buka Akses CatatKas</string>
     <string name="biometrik_prompt_subtitle">Verifikasi biometrik atau PIN untuk melindungi data keuanganmu</string>
+    <string name="import_statement">Impor E-Statement</string>
+    <string name="scan_receipt">Pindai Bukti Bayar</string>
+    <string name="needs_label">Kebutuhan (50%)</string>
+    <string name="wants_label">Keinginan (30%)</string>
+    <string name="savings_label">Tabungan (20%)</string>
+    <string name="decision_calculator">Kalkulator Keputusan</string>
+    <string name="wishlist_title">Catatan Keinginan vs Kebutuhan</string>
 </resources>

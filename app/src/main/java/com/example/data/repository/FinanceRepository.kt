@@ -2,6 +2,7 @@ package com.example.data.repository
 
 import com.example.data.local.CashBreakdownDao
 import com.example.data.local.CategoryDao
+import com.example.data.local.DecisionPlanDao
 import com.example.data.local.MerchantKnowledgeDao
 import com.example.data.local.TransactionDao
 import com.example.data.local.WalletDao
@@ -12,7 +13,10 @@ import com.example.data.model.CashBreakdownEntity
 import com.example.data.model.CategoryEntity
 import com.example.data.model.CategorySpending
 import com.example.data.model.DailyCashflow
+import com.example.data.model.DecisionPlanEntity
 import com.example.data.model.MonthlySummary
+import com.example.data.model.PlanStatus
+import com.example.data.model.PlanType
 import com.example.data.model.TransactionEntity
 import com.example.data.model.TransactionType
 import com.example.data.model.TransactionWithCategory
@@ -29,7 +33,8 @@ class FinanceRepository(
     private val transactionDao: TransactionDao,
     private val walletDao: WalletDao,
     private val cashBreakdownDao: CashBreakdownDao,
-    private val merchantKnowledgeDao: MerchantKnowledgeDao
+    private val merchantKnowledgeDao: MerchantKnowledgeDao,
+    private val decisionPlanDao: DecisionPlanDao
 ) {
     val patternLearner = PatternLearnerEngine(merchantKnowledgeDao)
 
@@ -311,5 +316,34 @@ class FinanceRepository(
         } catch (e: Exception) {
             false
         }
+    }
+
+    // --- Decision Planning & Wishlist Methods ---
+    val allDecisionPlans: Flow<List<DecisionPlanEntity>> =
+        decisionPlanDao.getAllPlans()
+
+    suspend fun insertDecisionPlan(plan: DecisionPlanEntity): Long =
+        decisionPlanDao.insertPlan(plan)
+
+    suspend fun updateDecisionPlan(plan: DecisionPlanEntity) =
+        decisionPlanDao.updatePlan(plan)
+
+    suspend fun deleteDecisionPlan(plan: DecisionPlanEntity) =
+        decisionPlanDao.deletePlan(plan)
+
+    suspend fun realizeDecisionPlan(
+        plan: DecisionPlanEntity,
+        walletName: String = "Mandiri"
+    ): Long {
+        decisionPlanDao.updatePlan(plan.copy(status = PlanStatus.REALIZED))
+        val transaction = TransactionEntity(
+            amount = plan.estimatedPrice,
+            type = TransactionType.EXPENSE,
+            categoryId = plan.categoryId ?: 1L,
+            wallet = walletName,
+            dateMillis = System.currentTimeMillis(),
+            note = "${plan.title} (${if (plan.planType == PlanType.NEEDS) "Kebutuhan" else "Keinginan"})"
+        )
+        return transactionDao.insertTransaction(transaction)
     }
 }

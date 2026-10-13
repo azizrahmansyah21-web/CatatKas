@@ -8,6 +8,7 @@ import androidx.room.TypeConverters
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.data.model.CashBreakdownEntity
 import com.example.data.model.CategoryEntity
+import com.example.data.model.DecisionPlanEntity
 import com.example.data.model.MerchantKnowledgeEntity
 import com.example.data.model.TransactionEntity
 import com.example.data.model.TransactionType
@@ -22,9 +23,10 @@ import kotlinx.coroutines.launch
         TransactionEntity::class,
         WalletEntity::class,
         CashBreakdownEntity::class,
-        MerchantKnowledgeEntity::class
+        MerchantKnowledgeEntity::class,
+        DecisionPlanEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -34,6 +36,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun walletDao(): WalletDao
     abstract fun cashBreakdownDao(): CashBreakdownDao
     abstract fun merchantKnowledgeDao(): MerchantKnowledgeDao
+    abstract fun decisionPlanDao(): DecisionPlanDao
 
     companion object {
         @Volatile

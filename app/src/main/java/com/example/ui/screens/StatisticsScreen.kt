@@ -1,7 +1,11 @@
 package com.example.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,52 +23,102 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.UploadFile
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.CategorySpending
 import com.example.data.model.MonthlySummary
+import com.example.engine.FinancialDecisionMetrics
 import com.example.ui.components.CategoryIconBadge
-import com.example.ui.components.EmptyStateView
 import com.example.ui.components.MonthSelector
+import com.example.ui.theme.AmberSecondary
+import com.example.ui.theme.DarkSurface
+import com.example.ui.theme.DarkSurfaceElevated
+import com.example.ui.theme.EmeraldPrimary
 import com.example.ui.theme.ExpenseRed
 import com.example.ui.theme.IncomeGreen
 import com.example.util.CategoryIcons
 import com.example.util.CurrencyFormatter
-import java.util.Calendar
 
 @Composable
 fun StatisticsScreen(
     year: Int,
     month: Int,
     summary: MonthlySummary,
+    decisionMetrics: FinancialDecisionMetrics? = null,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onCurrentMonth: () -> Unit,
+    onImportStatementSelected: (Uri, String?) -> Unit,
+    onScanReceiptPhoto: () -> Unit,
+    onScanReceiptGallerySelected: (Uri) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val hasData = summary.totalIncome > 0 || summary.totalExpense > 0
+
+    var showPasswordDialog by remember { mutableStateOf(false) }
+    var pendingFileUri by remember { mutableStateOf<Uri?>(null) }
+    var passwordInput by remember { mutableStateOf("") }
+    var showScanChoiceModal by remember { mutableStateOf(false) }
+
+    // File picker launcher for Excel (.xlsx/.xls) and CSV (.csv)
+    val documentPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            pendingFileUri = uri
+            showPasswordDialog = true
+        }
+    }
+
+    // Media picker launcher for receipt screenshots (gallery)
+    val galleryPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            onScanReceiptGallerySelected(uri)
+        }
+    }
 
     LazyColumn(
         modifier = modifier
@@ -84,390 +138,546 @@ fun StatisticsScreen(
                     month = month,
                     onPrevious = onPreviousMonth,
                     onNext = onNextMonth,
-                    onCurrentMonth = onCurrentMonth,
-                    modifier = Modifier.fillMaxWidth()
+                    onCurrentMonth = onCurrentMonth
                 )
             }
         }
 
-        if (!hasData) {
-            item {
-                Spacer(modifier = Modifier.height(40.dp))
-                EmptyStateView(
-                    title = "Belum Ada Data Statistik",
-                    subtitle = "Mulai catat transaksi pengeluaran dan pemasukan untuk melihat grafik dan analisis keuangan bulanan di sini.",
-                    icon = Icons.Default.PieChart
+        // Section A: Smart Import & Scan Action Center (Primary on Empty State, Quick Access when Data Exists)
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 8.dp)
+                    .testTag("smart_intake_hub_card"),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = DarkSurfaceElevated
                 )
-            }
-        } else {
-            // Financial Health Insight Card
-            item {
-                Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)) {
-                    FinancialHealthCard(summary = summary)
-                }
-            }
-
-            // Daily Spending Trend Bar Chart
-            item {
-                Spacer(modifier = Modifier.height(12.dp))
-                Box(modifier = Modifier.padding(horizontal = 20.dp)) {
-                    DailySpendingChartCard(summary = summary)
-                }
-            }
-
-            // Expense Breakdown Header
-            item {
-                Spacer(modifier = Modifier.height(18.dp))
-                Row(
+            ) {
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .padding(20.dp)
                 ) {
-                    Text(
-                        text = "Rincian Kategori Pengeluaran",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
-                        ),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "${summary.categorySpendings.size} Kategori",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    )
-                }
-            }
-
-            // Category Spendings List
-            if (summary.categorySpendings.isEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Belum ada catatan pengeluaran di bulan ini.",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        )
-                    }
-                }
-            } else {
-                items(
-                    items = summary.categorySpendings,
-                    key = { it.category.id }
-                ) { spending ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 5.dp)
-                    ) {
-                        CategorySpendingItem(spending = spending)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun FinancialHealthCard(summary: MonthlySummary) {
-    val isNetPositive = summary.netBalance >= 0
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(18.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.TrendingUp,
-                    contentDescription = null,
-                    tint = if (isNetPositive) IncomeGreen else ExpenseRed,
-                    modifier = Modifier.size(20.dp)
-                )
-                Text(
-                    text = "Analisis Arus Kas",
-                    style = MaterialTheme.typography.titleSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                )
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Message text
-            val message = when {
-                summary.totalIncome == 0.0 && summary.totalExpense > 0.0 ->
-                    "Bulan ini kamu belum mencatat pemasukan. Coba catat sumber pemasukanmu agar analisis lebih akurat! 💡"
-                isNetPositive && summary.savingsRatePercentage >= 30f ->
-                    "Luar biasa! Kamu berhasil menghemat ${summary.savingsRatePercentage.toInt()}% dari total pemasukanmu bulan ini. Pertahankan gaya hidup hematmu! 🌿"
-                isNetPositive ->
-                    "Arus kas positif! Kamu menghemat ${CurrencyFormatter.formatRupiah(summary.netBalance)}. Pertimbangkan menyisihkan dana darurat. ✨"
-                else ->
-                    "Perhatian: Pengeluaranmu melebihi pemasukan bulan ini sebesar ${CurrencyFormatter.formatRupiah(-summary.netBalance)}. Cek pos pengeluaran terbesar di bawah! ⚠️"
-            }
-
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = 13.sp,
-                    lineHeight = 18.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            )
-
-            if (summary.totalIncome > 0) {
-                Spacer(modifier = Modifier.height(12.dp))
-                val ratio = (summary.totalExpense / summary.totalIncome).coerceIn(0.0, 1.0).toFloat()
-                Column {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Rasio Pengeluaran: ${(ratio * 100).toInt()}%",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.SemiBold,
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(EmeraldPrimary.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.UploadFile,
+                                contentDescription = null,
+                                tint = EmeraldPrimary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = if (!hasData) "Statistik Belum Ada Data" else "Impor Cerdas & Pindai",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
-                        )
-                        Text(
-                            text = "Tersisa: ${((1f - ratio) * 100).toInt()}%",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.SemiBold,
-                                color = IncomeGreen
+                            Text(
+                                text = if (!hasData)
+                                    "Mulai kenali pola keuanganmu dengan impor mutasi Excel/CSV atau foto struk!"
+                                else
+                                    "Tambah mutasi rekening Excel/CSV atau pindai struk pembayaran",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                        )
+                        }
                     }
-                    Spacer(modifier = Modifier.height(6.dp))
-                    LinearProgressIndicator(
-                        progress = { ratio },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .clip(CircleShape),
-                        color = if (ratio > 0.8f) ExpenseRed else MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surface
-                    )
-                }
-            }
-        }
-    }
-}
 
-@Composable
-fun DailySpendingChartCard(summary: MonthlySummary) {
-    val dailyList = summary.dailyCashflows
-    val maxDailyExpense = remember(dailyList) {
-        val max = dailyList.maxOfOrNull { it.expense } ?: 1.0
-        if (max <= 0) 1.0 else max
-    }
+                    Spacer(modifier = Modifier.height(16.dp))
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(18.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Tren Pengeluaran Harian",
-                    style = MaterialTheme.typography.titleSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                )
-                Text(
-                    text = "Maks: ${CurrencyFormatter.formatRupiah(maxDailyExpense)}",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Canvas Bar Chart
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(100.dp)
-            ) {
-                val primaryColor = MaterialTheme.colorScheme.primary
-                val outlineColor = MaterialTheme.colorScheme.outlineVariant
-
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val count = dailyList.size
-                    if (count == 0) return@Canvas
-
-                    val barSpacing = 3.dp.toPx()
-                    val totalSpacing = barSpacing * (count - 1)
-                    val barWidth = ((size.width - totalSpacing) / count).coerceAtLeast(2.dp.toPx())
-
-                    // Baseline
-                    drawLine(
-                        color = outlineColor,
-                        start = Offset(0f, size.height),
-                        end = Offset(size.width, size.height),
-                        strokeWidth = 1.dp.toPx()
-                    )
-
-                    dailyList.forEachIndexed { index, cashflow ->
-                        val x = index * (barWidth + barSpacing)
-                        val heightFraction = (cashflow.expense / maxDailyExpense).toFloat().coerceIn(0.04f, 1f)
-                        val barHeight = size.height * heightFraction
-
-                        val barColor = if (cashflow.expense > 0) {
-                            if (cashflow.expense >= maxDailyExpense * 0.8) ExpenseRed
-                            else primaryColor
-                        } else {
-                            outlineColor.copy(alpha = 0.3f)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // Button 1: Impor Berkas Excel / CSV
+                        Button(
+                            onClick = {
+                                documentPickerLauncher.launch(
+                                    arrayOf(
+                                        "text/csv",
+                                        "text/comma-separated-values",
+                                        "application/vnd.ms-excel",
+                                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                        "application/octet-stream",
+                                        "*/*"
+                                    )
+                                )
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("import_excel_csv_button"),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = EmeraldPrimary,
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Description,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Impor Excel/CSV",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
                         }
 
-                        drawRoundRect(
-                            color = barColor,
-                            topLeft = Offset(x, size.height - barHeight),
-                            size = Size(barWidth, barHeight),
-                            cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
+                        // Button 2: Pindai Struk / Bukti Bayar
+                        Button(
+                            onClick = { showScanChoiceModal = true },
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("scan_receipt_button"),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = DarkSurface,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.QrCodeScanner,
+                                contentDescription = null,
+                                tint = AmberSecondary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Pindai Struk",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        if (hasData) {
+            // Cashflow Overview Card
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 6.dp)
+                        .testTag("statistics_overview_card"),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp)
+                    ) {
+                        Text(
+                            text = "Ringkasan Arus Kas",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Total Pemasukan",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = CurrencyFormatter.formatRupiah(summary.totalIncome),
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = IncomeGreen
+                                )
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    text = "Total Pengeluaran",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = CurrencyFormatter.formatRupiah(summary.totalExpense),
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = ExpenseRed
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(14.dp))
+                        val netBalance = summary.netBalance
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    if (netBalance >= 0) IncomeGreen.copy(alpha = 0.1f)
+                                    else ExpenseRed.copy(alpha = 0.1f)
+                                )
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Surplus / Defisit",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = CurrencyFormatter.formatSignedRupiah(netBalance, netBalance >= 0),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (netBalance >= 0) IncomeGreen else ExpenseRed
+                            )
+                        }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            // 50/30/20 Decision Metric Card
+            if (decisionMetrics != null) {
+                item {
+                    val r = decisionMetrics.ruleAnalysis
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 8.dp)
+                            .testTag("rule_50_30_20_card"),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.TrendingUp,
+                                    contentDescription = null,
+                                    tint = EmeraldPrimary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Aturan Finansial 50 / 30 / 20",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Tgl 1",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
-                )
-                Text(
-                    text = "Tgl 15",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
-                )
-                Text(
-                    text = "Tgl ${dailyList.size}",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
-                )
+                            // Needs Progress
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("Kebutuhan Pokok (Max 50%)", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("${r.needsPercentage.toInt()}% (${CurrencyFormatter.formatRupiah(r.needsAmount)})", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            LinearProgressIndicator(
+                                progress = { (r.needsPercentage / 100f).coerceIn(0f, 1f) },
+                                modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                                color = if (r.needsPercentage > 55f) ExpenseRed else EmeraldPrimary,
+                                trackColor = DarkSurfaceElevated
+                            )
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Wants Progress
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("Keinginan & Jajan (Max 30%)", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("${r.wantsPercentage.toInt()}% (${CurrencyFormatter.formatRupiah(r.wantsAmount)})", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            LinearProgressIndicator(
+                                progress = { (r.wantsPercentage / 100f).coerceIn(0f, 1f) },
+                                modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                                color = if (r.wantsPercentage > 35f) AmberSecondary else EmeraldPrimary,
+                                trackColor = DarkSurfaceElevated
+                            )
+
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = r.recommendation,
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                lineHeight = 17.sp
+                            )
+                        }
+                    }
+                }
             }
+
+            // Category Breakdown Chart
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 8.dp)
+                        .testTag("donut_chart_card"),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp)
+                    ) {
+                        Text(
+                            text = "Proporsi Kategori Pengeluaran",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(18.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(180.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            DonutChart(
+                                items = summary.categorySpendings,
+                                totalAmount = summary.totalExpense
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Category Ranking List
+            items(summary.categorySpendings) { item ->
+                SpendingRowItem(item = item)
+            }
+        }
+    }
+
+    // Modal: Pilih Metode Pindai Struk
+    if (showScanChoiceModal) {
+        AlertDialog(
+            onDismissRequest = { showScanChoiceModal = false },
+            title = {
+                Text(
+                    text = "Pindai Struk / Bukti Bayar",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Pilih sumber bukti pembayaran:",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedButton(
+                        onClick = {
+                            showScanChoiceModal = false
+                            onScanReceiptPhoto()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.CameraAlt, contentDescription = null, tint = EmeraldPrimary)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Kamera Langsung (Foto Struk Fisik)")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            showScanChoiceModal = false
+                            galleryPickerLauncher.launch(
+                                androidx.activity.result.PickVisualMediaRequest(
+                                    ActivityResultContracts.PickVisualMedia.ImageOnly
+                                )
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Image, contentDescription = null, tint = AmberSecondary)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Galeri (Screenshot M-Banking / E-Wallet)")
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showScanChoiceModal = false }) {
+                    Text("Batal")
+                }
+            }
+        )
+    }
+
+    // Modal: Masukkan Sandi E-Statement (DDMMYYYY)
+    if (showPasswordDialog && pendingFileUri != null) {
+        AlertDialog(
+            onDismissRequest = { showPasswordDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Key,
+                    contentDescription = null,
+                    tint = AmberSecondary,
+                    modifier = Modifier.size(32.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "Kata Sandi Berkas",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "Beberapa berkas e-statement bank (seperti Mandiri Livin') diproteksi sandi tanggal lahir (format DDMMYYYY). Kosongkan jika berkas Anda tidak bersandi.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = 17.sp
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    OutlinedTextField(
+                        value = passwordInput,
+                        onValueChange = { passwordInput = it },
+                        label = { Text("Sandi Tanggal Lahir (DDMMYYYY)") },
+                        placeholder = { Text("Contoh: 12051995") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val uri = pendingFileUri ?: return@Button
+                        val pwd = passwordInput.trim().ifEmpty { null }
+                        showPasswordDialog = false
+                        passwordInput = ""
+                        onImportStatementSelected(uri, pwd)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
+                ) {
+                    Text("Buka & Impor")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPasswordDialog = false }) {
+                    Text("Batal")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun DonutChart(
+    items: List<CategorySpending>,
+    totalAmount: Double
+) {
+    if (totalAmount <= 0) return
+
+    val colors = remember(items) {
+        items.map { item ->
+            try {
+                Color(android.graphics.Color.parseColor(item.category.colorHex))
+            } catch (_: Exception) {
+                EmeraldPrimary
+            }
+        }
+    }
+
+    Canvas(modifier = Modifier.size(160.dp)) {
+        val strokeWidth = 28.dp.toPx()
+        val diameter = size.minDimension - strokeWidth
+        val topLeft = Offset(strokeWidth / 2, strokeWidth / 2)
+        val arcSize = Size(diameter, diameter)
+
+        var startAngle = -90f
+        for (i in items.indices) {
+            val sweep = (items[i].totalAmount / totalAmount * 360f).toFloat()
+            drawArc(
+                color = colors[i],
+                startAngle = startAngle,
+                sweepAngle = sweep - 1.5f,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+            )
+            startAngle += sweep
         }
     }
 }
 
 @Composable
-fun CategorySpendingItem(spending: CategorySpending) {
-    val cat = spending.category
-    val catColor = CategoryIcons.parseColor(cat.colorHex)
-
+private fun SpendingRowItem(item: CategorySpending) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-        )
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp)
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                CategoryIconBadge(
-                    iconKey = cat.iconKey,
-                    colorHex = cat.colorHex,
-                    size = 40.dp,
-                    iconSize = 20.dp
+            CategoryIconBadge(
+                iconKey = item.category.iconKey,
+                colorHex = item.category.colorHex,
+                size = 40.dp
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = item.category.name,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = cat.name,
-                        style = MaterialTheme.typography.titleSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
-                        ),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "${spending.transactionCount} transaksi",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    )
-                }
-
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = CurrencyFormatter.formatRupiah(spending.totalAmount),
-                        style = MaterialTheme.typography.titleSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    )
-                    Text(
-                        text = "${String.format("%.1f", spending.percentage)}%",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = catColor,
-                            fontWeight = FontWeight.Bold
-                        )
-                    )
-                }
+                Text(
+                    text = "${item.transactionCount} transaksi • ${item.percentage.toInt()}%",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Proportional Progress Bar
-            LinearProgressIndicator(
-                progress = { (spending.percentage / 100f).coerceIn(0.01f, 1f) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp)
-                    .clip(CircleShape),
-                color = catColor,
-                trackColor = MaterialTheme.colorScheme.surface
+            Text(
+                text = CurrencyFormatter.formatRupiah(item.totalAmount),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = ExpenseRed
             )
         }
     }

@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.FilterChip
@@ -43,6 +44,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.model.CategoryEntity
 import com.example.data.model.MonthlySummary
 import com.example.data.model.TransactionType
 import com.example.data.model.TransactionWithCategory
@@ -63,14 +65,18 @@ fun TransactionsScreen(
     transactions: List<TransactionWithCategory>,
     activeFilter: TransactionType?,
     searchQuery: String,
+    categories: List<CategoryEntity> = emptyList(),
+    selectedCategoryId: Long? = null,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onCurrentMonth: () -> Unit,
     onFilterChanged: (TransactionType?) -> Unit,
+    onCategorySelected: (Long?) -> Unit = {},
     onSearchChanged: (String) -> Unit,
     onItemClick: (TransactionWithCategory) -> Unit,
     onItemDelete: (TransactionWithCategory) -> Unit,
     onAddTransactionClick: () -> Unit,
+    onManageCategoriesClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var isSearchExpanded by remember { mutableStateOf(false) }
@@ -122,18 +128,23 @@ fun TransactionsScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 10.dp)
+                    .padding(vertical = 8.dp)
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     // Filter Chips (Semua, Pengeluaran, Pemasukan)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(
-                            selected = activeFilter == null,
-                            onClick = { onFilterChanged(null) },
+                            selected = activeFilter == null && selectedCategoryId == null,
+                            onClick = {
+                                onFilterChanged(null)
+                                onCategorySelected(null)
+                            },
                             label = { Text("Semua", fontSize = 12.sp) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
@@ -199,7 +210,7 @@ fun TransactionsScreen(
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 8.dp)
+                            .padding(horizontal = 20.dp, vertical = 8.dp)
                             .testTag("search_query_input"),
                         shape = RoundedCornerShape(14.dp),
                         colors = OutlinedTextFieldDefaults.colors(
@@ -215,6 +226,91 @@ fun TransactionsScreen(
                             )
                         }
                     )
+                }
+
+                // Horizontal Category Filter Chips (Pemasukan & Pengeluaran disatukan)
+                val relevantCategories = remember(categories, activeFilter) {
+                    if (activeFilter != null) {
+                        categories.filter { it.type == activeFilter }
+                    } else {
+                        categories
+                    }
+                }
+
+                if (relevantCategories.isNotEmpty()) {
+                    LazyRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                            .testTag("horizontal_category_chips"),
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(relevantCategories, key = { it.id }) { cat ->
+                            val isSelected = selectedCategoryId == cat.id
+                            val catColor = try {
+                                Color(android.graphics.Color.parseColor(cat.colorHex))
+                            } catch (e: Exception) {
+                                MaterialTheme.colorScheme.primary
+                            }
+
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = {
+                                    onCategorySelected(if (isSelected) null else cat.id)
+                                },
+                                leadingIcon = {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(catColor)
+                                    )
+                                },
+                                label = {
+                                    Text(
+                                        text = cat.name,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = catColor.copy(alpha = 0.25f),
+                                    selectedLabelColor = MaterialTheme.colorScheme.onSurface,
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                        }
+
+                        if (onManageCategoriesClick != null) {
+                            item {
+                                FilterChip(
+                                    selected = false,
+                                    onClick = onManageCategoriesClick,
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Add,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(14.dp),
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    },
+                                    label = {
+                                        Text(
+                                            text = "Tambah Kategori",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    },
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                                    )
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
