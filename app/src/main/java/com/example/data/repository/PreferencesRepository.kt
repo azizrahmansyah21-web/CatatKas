@@ -27,7 +27,8 @@ data class UserPreferences(
     val reminderEnabled: Boolean = true,
     val reminderHour: Int = 20,
     val reminderMinute: Int = 0,
-    val lastBackupTimestamp: Long = 0L
+    val lastBackupTimestamp: Long = 0L,
+    val rememberedStatementPassword: String = ""
 )
 
 class PreferencesRepository(private val context: Context) {
@@ -38,6 +39,7 @@ class PreferencesRepository(private val context: Context) {
     private val REMINDER_HOUR_KEY = intPreferencesKey("reminder_hour")
     private val REMINDER_MINUTE_KEY = intPreferencesKey("reminder_minute")
     private val LAST_BACKUP_KEY = longPreferencesKey("last_backup_timestamp")
+    private val STATEMENT_PASSWORD_KEY = stringPreferencesKey("remembered_statement_password")
 
     val userPreferences: Flow<UserPreferences> = context.dataStore.data.map { preferences ->
         val themeString = preferences[THEME_MODE_KEY] ?: ThemeMode.DARK.name
@@ -54,7 +56,8 @@ class PreferencesRepository(private val context: Context) {
             reminderEnabled = preferences[REMINDER_ENABLED_KEY] ?: true,
             reminderHour = preferences[REMINDER_HOUR_KEY] ?: 20,
             reminderMinute = preferences[REMINDER_MINUTE_KEY] ?: 0,
-            lastBackupTimestamp = preferences[LAST_BACKUP_KEY] ?: 0L
+            lastBackupTimestamp = preferences[LAST_BACKUP_KEY] ?: 0L,
+            rememberedStatementPassword = preferences[STATEMENT_PASSWORD_KEY] ?: ""
         )
     }
 
@@ -80,5 +83,9 @@ class PreferencesRepository(private val context: Context) {
 
     suspend fun setLastBackupTimestamp(timestamp: Long) {
         context.dataStore.edit { it[LAST_BACKUP_KEY] = timestamp }
+    }
+
+    suspend fun setRememberedStatementPassword(password: String) {
+        context.dataStore.edit { it[STATEMENT_PASSWORD_KEY] = password }
     }
 }

@@ -1,10 +1,14 @@
 package com.example.data.repository
 
+import com.example.data.local.CashBreakdownDao
 import com.example.data.local.CategoryDao
+import com.example.data.local.MerchantKnowledgeDao
 import com.example.data.local.TransactionDao
+import com.example.data.local.WalletDao
 import com.example.data.model.BackupCategoryDto
 import com.example.data.model.BackupPayload
 import com.example.data.model.BackupTransactionDto
+import com.example.data.model.CashBreakdownEntity
 import com.example.data.model.CategoryEntity
 import com.example.data.model.CategorySpending
 import com.example.data.model.DailyCashflow
@@ -12,20 +16,31 @@ import com.example.data.model.MonthlySummary
 import com.example.data.model.TransactionEntity
 import com.example.data.model.TransactionType
 import com.example.data.model.TransactionWithCategory
+import com.example.data.model.WalletEntity
+import com.example.engine.FinancialDecisionEngine
+import com.example.engine.FinancialDecisionMetrics
+import com.example.engine.PatternLearnerEngine
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import java.util.Calendar
 
 class FinanceRepository(
     private val categoryDao: CategoryDao,
-    private val transactionDao: TransactionDao
+    private val transactionDao: TransactionDao,
+    private val walletDao: WalletDao,
+    private val cashBreakdownDao: CashBreakdownDao,
+    private val merchantKnowledgeDao: MerchantKnowledgeDao
 ) {
+    val patternLearner = PatternLearnerEngine(merchantKnowledgeDao)
+
     val allTransactions: Flow<List<TransactionWithCategory>> =
         transactionDao.getAllTransactionsWithCategory()
 
     val allCategories: Flow<List<CategoryEntity>> =
         categoryDao.getAllCategories()
+
+    val allWallets: Flow<List<WalletEntity>> =
+        walletDao.getAllWallets()
 
     fun getCategoriesByType(type: TransactionType): Flow<List<CategoryEntity>> =
         categoryDao.getCategoriesByType(type)
@@ -76,6 +91,16 @@ class FinanceRepository(
         return getTransactionsForMonth(year, month).map { list ->
             calculateSummary(year, month, list)
         }
+    }
+
+    suspend fun getDecisionMetricsForMonth(year: Int, month: Int): FinancialDecisionMetrics {
+        val transactions = getTransactionsForMonthList(year, month)
+        val wallets = walletDao.getAllWalletsList()
+        val totalCashBalance = wallets.sumOf { it.initialBalance } +
+                (transactions.filter { it.transaction.type == TransactionType.INCOME }.sumOf { it.transaction.amount }) -
+                (transactions.filter { it.transaction.type == TransactionType.EXPENSE }.sumOf { it.transaction.amount })
+
+        return FinancialDecisionEngine.calculateDecisionMetrics(transactions, totalCashBalance)
     }
 
     private fun calculateSummary(
@@ -185,6 +210,44 @@ class FinanceRepository(
         categoryDao.deleteCategory(category)
     }
 
+    suspend fun insertWallet(wallet: WalletEntity): Long {
+        return walletDao.insertWallet(wallet)
+    }
+
+    suspend fun updateWallet(wallet: WalletEntity) {
+        walletDao.updateWallet(wallet)
+    }
+
+    suspend fun deleteWallet(wallet: WalletEntity) {
+        walletDao.deleteWallet(wallet)
+    }
+
+    // Cash Splitter Functions
+    suspend fun splitCashWithdrawal(
+        transactionId: Long,
+        breakdowns: List<CashBreakdownEntity>
+    ) {
+        cashBreakdownDao.deleteBreakdownsForTransaction(transactionId)
+        cashBreakdownDao.insertBreakdowns(breakdowns)
+    }
+
+    suspend fun getBreakdownsForTransaction(transactionId: Long): List<CashBreakdownEntity> {
+        return cashBreakdownDao.getBreakdownsForTransactionList(transactionId)
+    }
+
+    // E-Statement Batch Insertion & Feedback Learning
+    suspend fun importStatementBatch(
+        transactions: List<TransactionEntity>,
+        learnedKeywords: Map<String, Long> // merchantName -> categoryId
+    ): Int {
+        val insertedIds = transactionDao.insertTransactions(transactions)
+        // Reinforce pattern learner
+        for ((merchant, catId) in learnedKeywords) {
+            patternLearner.learnUserCorrection(merchant, catId)
+        }
+        return insertedIds.size
+    }
+
     suspend fun exportBackupPayload(): BackupPayload {
         val categories = categoryDao.getAllCategoriesList().map {
             BackupCategoryDto(
@@ -218,7 +281,6 @@ class FinanceRepository(
 
     suspend fun restoreBackup(payload: BackupPayload): Boolean {
         return try {
-            // Restore categories first
             val categoryEntities = payload.categories.map {
                 CategoryEntity(
                     id = it.id,
@@ -232,7 +294,6 @@ class FinanceRepository(
             }
             categoryDao.insertCategories(categoryEntities)
 
-            // Restore transactions
             val transactionEntities = payload.transactions.map {
                 TransactionEntity(
                     id = it.id,

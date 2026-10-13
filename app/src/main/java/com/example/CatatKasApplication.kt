@@ -15,7 +15,7 @@ class CatatKasApplication : Application() {
     val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     val database by lazy { AppDatabase.getDatabase(this, applicationScope) }
-    val financeRepository by lazy { FinanceRepository(database.categoryDao(), database.transactionDao()) }
+    val financeRepository by lazy { FinanceRepository(database.categoryDao(), database.transactionDao(), database.walletDao(), database.cashBreakdownDao(), database.merchantKnowledgeDao()) }
     val preferencesRepository by lazy { PreferencesRepository(this) }
 
     override fun onCreate() {

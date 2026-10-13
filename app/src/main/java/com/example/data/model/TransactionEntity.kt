@@ -27,7 +27,10 @@ data class TransactionEntity(
     val type: TransactionType,
     val categoryId: Long,
     val wallet: String = "Tunai",
+    val destinationWalletId: Long? = null,
     val dateMillis: Long = System.currentTimeMillis(),
     val note: String = "",
+    val rawDescription: String = "",
+    val isAtmWithdrawal: Boolean = false,
     val createdAtMillis: Long = System.currentTimeMillis()
 )

@@ -10,5 +10,10 @@ data class TransactionWithCategory(
         parentColumn = "categoryId",
         entityColumn = "id"
     )
-    val category: CategoryEntity?
+    val category: CategoryEntity?,
+    @Relation(
+        parentColumn = "id",
+        entityColumn = "parentTransactionId"
+    )
+    val cashBreakdowns: List<CashBreakdownEntity> = emptyList()
 )

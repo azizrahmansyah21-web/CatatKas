@@ -2,7 +2,18 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Brand Emerald & Gold
+// Visual Identity Tokens requested by user:
+// Background: #121212
+// Card / Container: #1F2937
+// CTA / Success / Glowing Emerald: #10B981
+// Warning / Accent / Subtle Brand Amber: #F59E0B
+
+val DarkBg = Color(0xFF121212)
+val DarkSurface = Color(0xFF1F2937)
+val DarkSurfaceElevated = Color(0xFF283548)
+val DarkSurfaceHighlight = Color(0xFF374151)
+val DarkOutline = Color(0xFF4B5563)
+
 val EmeraldPrimary = Color(0xFF10B981)
 val EmeraldDark = Color(0xFF059669)
 val EmeraldLight = Color(0xFF34D399)
@@ -21,25 +32,18 @@ val IncomeGreen = Color(0xFF10B981)
 val IncomeGreenContainer = Color(0xFF064E3B)
 val IncomeGreenLight = Color(0xFFECFDF5)
 
-// Dark Theme Surfaces
-val DarkBg = Color(0xFF0B1120)
-val DarkSurface = Color(0xFF131D31)
-val DarkSurfaceElevated = Color(0xFF1E293B)
-val DarkSurfaceHighlight = Color(0xFF28364F)
-val DarkOutline = Color(0xFF334155)
+// Neutral Text
+val TextPrimaryDark = Color(0xFFF9FAFB)
+val TextSecondaryDark = Color(0xFF9CA3AF)
+val TextTertiaryDark = Color(0xFF6B7280)
 
-// Light Theme Surfaces
-val LightBg = Color(0xFFF8FAFC)
+// Light Theme equivalents (clean & readable)
+val LightBg = Color(0xFFF9FAFB)
 val LightSurface = Color(0xFFFFFFFF)
-val LightSurfaceElevated = Color(0xFFF1F5F9)
-val LightSurfaceHighlight = Color(0xFFE2E8F0)
-val LightOutline = Color(0xFFCBD5E1)
+val LightSurfaceElevated = Color(0xFFF3F4F6)
+val LightSurfaceHighlight = Color(0xFFE5E7EB)
+val LightOutline = Color(0xFFD1D5DB)
 
-// Neutral Text & Icons
-val TextPrimaryDark = Color(0xFFF8FAFC)
-val TextSecondaryDark = Color(0xFF94A3B8)
-val TextTertiaryDark = Color(0xFF64748B)
-
-val TextPrimaryLight = Color(0xFF0F172A)
-val TextSecondaryLight = Color(0xFF475569)
-val TextTertiaryLight = Color(0xFF94A3B8)
+val TextPrimaryLight = Color(0xFF111827)
+val TextSecondaryLight = Color(0xFF4B5563)
+val TextTertiaryLight = Color(0xFF9CA3AF)
