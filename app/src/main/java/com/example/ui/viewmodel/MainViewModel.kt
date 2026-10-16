@@ -10,6 +10,7 @@ import com.example.data.model.CategoryEntity
 import com.example.data.model.CategorySpending
 import com.example.data.model.DailyCashflow
 import com.example.data.model.DecisionPlanEntity
+import com.example.data.model.ImportBatchEntity
 import com.example.data.model.MonthlySummary
 import com.example.data.model.PlanStatus
 import com.example.data.model.PlanType
@@ -113,6 +114,13 @@ class MainViewModel(
         )
 
     val allWallets: StateFlow<List<WalletEntity>> = financeRepository.allWallets
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    val allImportBatches: StateFlow<List<ImportBatchEntity>> = financeRepository.allImportBatches
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -302,24 +310,62 @@ class MainViewModel(
             val defaultExpenseCat = categories.firstOrNull { it.type == TransactionType.EXPENSE }?.id ?: 1L
             val defaultIncomeCat = categories.firstOrNull { it.type == TransactionType.INCOME }?.id ?: 5L
 
+            // 1. Create and insert batch tracking record
+            val batchEntity = ImportBatchEntity(
+                fileName = result.fileName,
+                fileFormat = if (result.fileName.endsWith(".csv", ignoreCase = true)) "CSV" else "EXCEL",
+                transactionCount = result.records.size,
+                totalIncome = result.totalIncome,
+                totalExpense = result.totalExpense,
+                detectedPeriod = result.detectedPeriod,
+                detectedBank = result.detectedBank
+            )
+            val batchId = financeRepository.insertImportBatch(batchEntity)
+
+            // 2. Insert all transactions linked to batchId with smart category mapping
             var importedCount = 0
             for (rec in result.records) {
-                val catId = if (rec.isExpense) defaultExpenseCat else defaultIncomeCat
+                val matchedCat = if (rec.suggestedCategory != null) {
+                    categories.firstOrNull { it.name.equals(rec.suggestedCategory, ignoreCase = true) }
+                } else null
+                val catId = matchedCat?.id ?: (if (rec.isExpense) defaultExpenseCat else defaultIncomeCat)
+
                 val entity = TransactionEntity(
                     amount = rec.amount,
                     type = if (rec.isExpense) TransactionType.EXPENSE else TransactionType.INCOME,
                     categoryId = catId,
                     wallet = rec.suspectedWallet,
                     dateMillis = rec.dateMillis,
-                    note = rec.description
+                    note = rec.description,
+                    isAtmWithdrawal = rec.isAtmWithdrawal,
+                    importBatchId = batchId
                 )
                 financeRepository.insertTransaction(entity)
                 importedCount++
             }
 
-            _uiMessage.emit("Berhasil mengimpor $importedCount transaksi dari berkas e-statement!")
+            // 3. Auto-adjust active view to the imported e-statement's month & year so user sees them immediately
+            _selectedMonth.value = result.primaryMonth
+            _selectedYear.value = result.primaryYear
+
+            _uiMessage.emit("Berhasil mengimpor $importedCount transaksi (${result.detectedPeriod}) dari ${result.fileName}! Tampilan otomatis diarahkan ke periode tersebut.")
             refreshDecisionMetrics()
         }
+    }
+
+    // Delete an entire imported batch and all its associated transactions
+    fun deleteImportBatch(batch: ImportBatchEntity) {
+        viewModelScope.launch {
+            val deletedCount = financeRepository.deleteImportBatchAndTransactions(batch.id)
+            _uiMessage.emit("Berkas '${batch.fileName}' dan $deletedCount mutasi terkait berhasil dihapus.")
+            refreshDecisionMetrics()
+        }
+    }
+
+    fun jumpToMonthYear(year: Int, month: Int) {
+        _selectedYear.value = year
+        _selectedMonth.value = month
+        _currentTab.value = NavTab.TRANSACTIONS
     }
 
     // Receipt OCR Scanning Handler

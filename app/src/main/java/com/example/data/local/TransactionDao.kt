@@ -51,6 +51,12 @@ interface TransactionDao {
     @Query("DELETE FROM transactions")
     suspend fun deleteAllTransactions()
 
+    @Query("DELETE FROM transactions WHERE importBatchId = :batchId")
+    suspend fun deleteTransactionsByBatchId(batchId: Long): Int
+
+    @Query("SELECT * FROM transactions WHERE importBatchId = :batchId")
+    suspend fun getTransactionsByBatchId(batchId: Long): List<TransactionEntity>
+
     @Query("SELECT COUNT(*) FROM transactions")
     suspend fun getTransactionCount(): Int
 }

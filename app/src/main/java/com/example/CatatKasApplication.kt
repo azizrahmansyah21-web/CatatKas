@@ -22,7 +22,8 @@ class CatatKasApplication : Application() {
             database.walletDao(),
             database.cashBreakdownDao(),
             database.merchantKnowledgeDao(),
-            database.decisionPlanDao()
+            database.decisionPlanDao(),
+            database.importBatchDao()
         )
     }
     val preferencesRepository by lazy { PreferencesRepository(this) }

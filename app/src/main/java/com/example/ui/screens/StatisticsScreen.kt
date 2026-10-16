@@ -71,8 +71,6 @@ import com.example.engine.FinancialDecisionMetrics
 import com.example.ui.components.CategoryIconBadge
 import com.example.ui.components.MonthSelector
 import com.example.ui.theme.AmberSecondary
-import com.example.ui.theme.DarkSurface
-import com.example.ui.theme.DarkSurfaceElevated
 import com.example.ui.theme.EmeraldPrimary
 import com.example.ui.theme.ExpenseRed
 import com.example.ui.theme.IncomeGreen
@@ -152,7 +150,7 @@ fun StatisticsScreen(
                     .testTag("smart_intake_hub_card"),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = DarkSurfaceElevated
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             ) {
                 Column(
@@ -246,7 +244,7 @@ fun StatisticsScreen(
                                 .testTag("scan_receipt_button"),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = DarkSurface,
+                                containerColor = MaterialTheme.colorScheme.surface,
                                 contentColor = MaterialTheme.colorScheme.onSurface
                             )
                         ) {
@@ -402,7 +400,7 @@ fun StatisticsScreen(
                                 progress = { (r.needsPercentage / 100f).coerceIn(0f, 1f) },
                                 modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
                                 color = if (r.needsPercentage > 55f) ExpenseRed else EmeraldPrimary,
-                                trackColor = DarkSurfaceElevated
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant
                             )
 
                             Spacer(modifier = Modifier.height(10.dp))
@@ -420,7 +418,7 @@ fun StatisticsScreen(
                                 progress = { (r.wantsPercentage / 100f).coerceIn(0f, 1f) },
                                 modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
                                 color = if (r.wantsPercentage > 35f) AmberSecondary else EmeraldPrimary,
-                                trackColor = DarkSurfaceElevated
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant
                             )
 
                             Spacer(modifier = Modifier.height(12.dp))

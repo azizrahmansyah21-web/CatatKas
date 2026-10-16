@@ -17,7 +17,8 @@ import androidx.room.PrimaryKey
     ],
     indices = [
         Index("categoryId"),
-        Index("dateMillis")
+        Index("dateMillis"),
+        Index("importBatchId")
     ]
 )
 data class TransactionEntity(
@@ -32,5 +33,6 @@ data class TransactionEntity(
     val note: String = "",
     val rawDescription: String = "",
     val isAtmWithdrawal: Boolean = false,
+    val importBatchId: Long? = null,
     val createdAtMillis: Long = System.currentTimeMillis()
 )

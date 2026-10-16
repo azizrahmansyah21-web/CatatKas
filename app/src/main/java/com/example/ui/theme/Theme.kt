@@ -13,7 +13,7 @@ import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
     primary = EmeraldPrimary,
-    onPrimary = Color(0xFF003822),
+    onPrimary = Color(0xFF064E3B),
     primaryContainer = EmeraldContainerDark,
     onPrimaryContainer = EmeraldLight,
     secondary = AmberSecondary,
@@ -21,7 +21,9 @@ private val DarkColorScheme = darkColorScheme(
     secondaryContainer = AmberContainerDark,
     onSecondaryContainer = Color(0xFFFDE68A),
     tertiary = ExpenseRed,
-    onTertiary = Color.White,
+    onTertiary = Color(0xFF451A1A),
+    tertiaryContainer = ExpenseRedContainer,
+    onTertiaryContainer = ExpenseRedLight,
     background = DarkBg,
     onBackground = TextPrimaryDark,
     surface = DarkSurface,
@@ -29,20 +31,22 @@ private val DarkColorScheme = darkColorScheme(
     surfaceVariant = DarkSurfaceElevated,
     onSurfaceVariant = TextSecondaryDark,
     outline = DarkOutline,
-    outlineVariant = DarkSurfaceHighlight
+    outlineVariant = DarkOutlineVariant
 )
 
 private val LightColorScheme = lightColorScheme(
     primary = EmeraldDark,
     onPrimary = Color.White,
     primaryContainer = EmeraldContainerLight,
-    onPrimaryContainer = Color(0xFF065F46),
-    secondary = AmberSecondary,
+    onPrimaryContainer = EmeraldOnContainerLight,
+    secondary = AmberDark,
     onSecondary = Color.White,
     secondaryContainer = AmberContainerLight,
-    onSecondaryContainer = Color(0xFF92400E),
-    tertiary = ExpenseRed,
+    onSecondaryContainer = AmberOnContainerLight,
+    tertiary = ExpenseRedDark,
     onTertiary = Color.White,
+    tertiaryContainer = ExpenseRedLight,
+    onTertiaryContainer = ExpenseRedOnContainerLight,
     background = LightBg,
     onBackground = TextPrimaryLight,
     surface = LightSurface,
@@ -50,7 +54,7 @@ private val LightColorScheme = lightColorScheme(
     surfaceVariant = LightSurfaceElevated,
     onSurfaceVariant = TextSecondaryLight,
     outline = LightOutline,
-    outlineVariant = LightSurfaceHighlight
+    outlineVariant = LightOutlineVariant
 )
 
 @Composable

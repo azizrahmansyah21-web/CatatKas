@@ -162,6 +162,7 @@ fun MainAppContent(viewModel: MainViewModel) {
     val monthlySummary by viewModel.monthlySummary.collectAsStateWithLifecycle()
     val decisionMetrics by viewModel.decisionMetrics.collectAsStateWithLifecycle()
     val userPreferences by viewModel.userPreferences.collectAsStateWithLifecycle()
+    val importBatches by viewModel.allImportBatches.collectAsStateWithLifecycle()
 
     val isTransactionSheetOpen by viewModel.isTransactionSheetOpen.collectAsStateWithLifecycle()
     val editingTransaction by viewModel.editingTransaction.collectAsStateWithLifecycle()
@@ -414,6 +415,8 @@ fun MainAppContent(viewModel: MainViewModel) {
                     ProfileScreen(
                         userPreferences = userPreferences,
                         wallets = wallets,
+                        importBatches = importBatches,
+                        onDeleteImportBatch = { batch -> viewModel.deleteImportBatch(batch) },
                         onThemeChanged = { viewModel.setThemeMode(it) },
                         onBiometricToggled = { viewModel.setBiometricEnabled(it) },
                         onPinChanged = { viewModel.setPinCode(it) },

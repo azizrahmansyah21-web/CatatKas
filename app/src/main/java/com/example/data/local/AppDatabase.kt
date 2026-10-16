@@ -12,6 +12,7 @@ import com.example.data.model.DecisionPlanEntity
 import com.example.data.model.MerchantKnowledgeEntity
 import com.example.data.model.TransactionEntity
 import com.example.data.model.TransactionType
+import com.example.data.model.ImportBatchEntity
 import com.example.data.model.WalletEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,9 +25,10 @@ import kotlinx.coroutines.launch
         WalletEntity::class,
         CashBreakdownEntity::class,
         MerchantKnowledgeEntity::class,
-        DecisionPlanEntity::class
+        DecisionPlanEntity::class,
+        ImportBatchEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -37,6 +39,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun cashBreakdownDao(): CashBreakdownDao
     abstract fun merchantKnowledgeDao(): MerchantKnowledgeDao
     abstract fun decisionPlanDao(): DecisionPlanDao
+    abstract fun importBatchDao(): ImportBatchDao
 
     companion object {
         @Volatile

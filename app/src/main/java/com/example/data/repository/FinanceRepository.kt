@@ -3,6 +3,7 @@ package com.example.data.repository
 import com.example.data.local.CashBreakdownDao
 import com.example.data.local.CategoryDao
 import com.example.data.local.DecisionPlanDao
+import com.example.data.local.ImportBatchDao
 import com.example.data.local.MerchantKnowledgeDao
 import com.example.data.local.TransactionDao
 import com.example.data.local.WalletDao
@@ -14,6 +15,7 @@ import com.example.data.model.CategoryEntity
 import com.example.data.model.CategorySpending
 import com.example.data.model.DailyCashflow
 import com.example.data.model.DecisionPlanEntity
+import com.example.data.model.ImportBatchEntity
 import com.example.data.model.MonthlySummary
 import com.example.data.model.PlanStatus
 import com.example.data.model.PlanType
@@ -34,9 +36,13 @@ class FinanceRepository(
     private val walletDao: WalletDao,
     private val cashBreakdownDao: CashBreakdownDao,
     private val merchantKnowledgeDao: MerchantKnowledgeDao,
-    private val decisionPlanDao: DecisionPlanDao
+    private val decisionPlanDao: DecisionPlanDao,
+    private val importBatchDao: ImportBatchDao
 ) {
     val patternLearner = PatternLearnerEngine(merchantKnowledgeDao)
+
+    val allImportBatches: Flow<List<ImportBatchEntity>> =
+        importBatchDao.getAllImportBatches()
 
     val allTransactions: Flow<List<TransactionWithCategory>> =
         transactionDao.getAllTransactionsWithCategory()
@@ -345,5 +351,15 @@ class FinanceRepository(
             note = "${plan.title} (${if (plan.planType == PlanType.NEEDS) "Kebutuhan" else "Keinginan"})"
         )
         return transactionDao.insertTransaction(transaction)
+    }
+
+    // --- Import Batch Management Methods ---
+    suspend fun insertImportBatch(batch: ImportBatchEntity): Long =
+        importBatchDao.insertImportBatch(batch)
+
+    suspend fun deleteImportBatchAndTransactions(batchId: Long): Int {
+        val deletedCount = transactionDao.deleteTransactionsByBatchId(batchId)
+        importBatchDao.deleteImportBatchById(batchId)
+        return deletedCount
     }
 }
